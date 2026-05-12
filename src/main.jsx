@@ -107,6 +107,18 @@ const cityOptions = Object.entries(pincodeDirectory).map(([pincode, details]) =>
   ...details
 }));
 
+function normalizePlace(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function resolveCity(city) {
+  const clean = normalizePlace(city);
+  if (!clean) return null;
+  return cityOptions.find((option) => normalizePlace(option.city) === clean)
+    || cityOptions.find((option) => normalizePlace(option.city).startsWith(clean))
+    || cityOptions.find((option) => normalizePlace(option.city).includes(clean));
+}
+
 function resolvePincode(pincode) {
   const clean = String(pincode || '').replace(/\D/g, '').slice(0, 6);
   const fallback = clean.length === 6
@@ -390,6 +402,26 @@ function App() {
     const clean = value.replace(/\D/g, '').slice(0, 6);
     const resolved = clean.length === 6 ? resolvePincode(clean) : { ...formUser, pincode: clean };
     setFormUser({ ...formUser, ...resolved, pincode: clean });
+  }
+
+  function handleCityChange(value) {
+    const matchedCity = resolveCity(value);
+    if (matchedCity) {
+      setFormUser({
+        ...formUser,
+        ...matchedCity,
+        city: matchedCity.city,
+        pincode: matchedCity.pincode
+      });
+      return;
+    }
+    setFormUser({
+      ...formUser,
+      city: value,
+      pincode: '',
+      state: '',
+      zone: ''
+    });
   }
 
   function useDeviceLocation() {
@@ -840,10 +872,10 @@ function App() {
                 <label>Flat / House / Street<input value={formUser.line1 || ''} onChange={(event) => setFormUser({ ...formUser, line1: event.target.value })} placeholder="House no, building, street" /></label>
                 <div className="form-row">
                   <label>Pincode<input value={formUser.pincode || ''} onChange={(event) => handlePincodeChange(event.target.value)} placeholder="560001" /></label>
-                  <label>City<input value={formUser.city || ''} onChange={(event) => setFormUser({ ...formUser, city: event.target.value })} /></label>
+                  <label>City<input value={formUser.city || ''} onChange={(event) => handleCityChange(event.target.value)} placeholder="Type city name" /></label>
                 </div>
                 <p className="location-hint">
-                  Showing {formUser.city || 'city'}, {formUser.state || 'state'} for pincode {formUser.pincode || '------'}.
+                  Type a supported pincode to fill city, or type a city name to fill pincode. Showing {formUser.city || 'city'}, {formUser.state || 'state'} {formUser.pincode || ''}.
                 </p>
                 <div className="form-row">
                   <label>State<input value={formUser.state || ''} onChange={(event) => setFormUser({ ...formUser, state: event.target.value })} /></label>
